@@ -9,16 +9,25 @@
 
 [![Project Page](https://img.shields.io/badge/Project-Page-blue)](https://hermes-streaming.github.io/)
 [![Paper](https://img.shields.io/badge/Paper-Arxiv-red)](https://arxiv.org/abs/2601.14724)
-<!-- [![HF Paper](https://img.shields.io/badge/Dataset-HuggingFace-yellow)](https://huggingface.co/datasets/OpenMOSS-Team/FutureOmni) -->
+[![HF Paper](https://img.shields.io/badge/Dataset-HuggingFace-yellow)](https://huggingface.co/papers/2601.14724)
 
 </div>
 
-The full refined code will be released soon.
+## 🔥 News
+
+- **[2026.03.09]** Full code released!
+- **[2025.01.23]** HERMES reached **#3 Paper of the day** on [Hugging Face Daily Papers](https://huggingface.co/papers/2601.14724)!
+- **[2025.01.21]** HERMES is available on [arXiv](https://arxiv.org/abs/2601.14724).
 
 
 ## 📧 Contact
 
 For any questions regarding the paper or the technical implementation, please feel free to contact haowei.zhang123@gmail.com
+
+
+## 🙏 Acknowledgements
+
+Our codebase is built upon [ReKV](https://github.com/Becomebright/ReKV). We gratefully acknowledge their contributions to the community.
 
 
 ## 📝 Citation
