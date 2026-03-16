@@ -21,50 +21,50 @@ BENCHMARK_CONFIGS = {
         "streaming": False,
         "anno_path": "data/videomme.json",
         "eval_cmds": [
-            "python video_qa/eval/eval_multiple_choice.py general --results_path {results_path}",
-            "python video_qa/eval/eval_multiple_choice.py videomme --results_path {results_path}",
+            "python eval/eval_multiple_choice.py general --results_path {results_path}",
+            "python eval/eval_multiple_choice.py videomme --results_path {results_path}",
         ],
     },
     "mvbench": {
         "streaming": False,
         "anno_path": "data/mvbench.json",
         "eval_cmds": [
-            "python video_qa/eval/eval_multiple_choice.py general --results_path {results_path}",
+            "python eval/eval_multiple_choice.py general --results_path {results_path}",
         ],
     },
     "egoschema": {
         "streaming": False,
         "anno_path": "data/egoschema.json",
         "eval_cmds": [
-            "python video_qa/eval/eval_multiple_choice.py egoschema --results_path {results_path}",
+            "python eval/eval_multiple_choice.py egoschema --results_path {results_path}",
         ],
     },
     "rvs_ego": {
         "streaming": True,
         "anno_path": "data/rvs/ego4d_oe.json",
         "eval_cmds": [
-            "python video_qa/eval/eval_open_ended.py --pred_path {results_path} --output_dir {save_dir}/tmp --output_json {save_dir}/results.json",
+            "python eval/eval_open_ended.py --pred_path {results_path} --output_dir {save_dir}/tmp --output_json {save_dir}/results.json",
         ],
     },
     "rvs_movie": {
         "streaming": True,
         "anno_path": "data/rvs/movienet_oe.json",
         "eval_cmds": [
-            "python video_qa/eval/eval_open_ended.py --pred_path {results_path} --output_dir {save_dir}/tmp --output_json {save_dir}/results.json",
+            "python eval/eval_open_ended.py --pred_path {results_path} --output_dir {save_dir}/tmp --output_json {save_dir}/results.json",
         ],
     },
     "ovobench": {
         "streaming": True,
         "anno_path": "data/ovobench_realtime_backeward.json",
         "eval_cmds": [
-            "python video_qa/eval/eval_multiple_choice.py general --results_path {results_path}",
+            "python eval/eval_multiple_choice.py general --results_path {results_path}",
         ],
     },
     "streamingbench": {
         "streaming": True,
         "anno_path": "data/streamingbench_realtime.json",
         "eval_cmds": [
-            "python video_qa/eval/eval_multiple_choice.py general --results_path {results_path}",
+            "python eval/eval_multiple_choice.py general --results_path {results_path}",
         ],
     },
 }
@@ -127,7 +127,7 @@ def run_eval(args, config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, default="llava_ov_7b", choices=['llava_ov_0.5b', 'llava_ov_7b', 'llava_ov_72b', 'qwen_vl_3b', 'qwen_vl_7b'])
+    parser.add_argument("--model", type=str, default="llava_ov_7b", choices=['llava_ov_0.5b', 'llava_ov_7b', 'llava_ov_72b', 'qwen2.5_vl_3b', 'qwen2.5_vl_7b'])
     parser.add_argument("--dataset", type=str, default=None, choices=list(BENCHMARK_CONFIGS.keys()))
     parser.add_argument("--num_chunks", type=int, default=1)
     parser.add_argument("--only_eval", action="store_true")

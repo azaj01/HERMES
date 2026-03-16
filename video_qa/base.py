@@ -55,7 +55,7 @@ MODELS = {
         'load_func': qwenvl_hermes_load_model,
         'model_class': Qwen2_5_VLForConditionalGeneration,
         'processor_class': Qwen2_5_VLProcessor,
-        'model_path': 'CUSTOM_PATH/Qwen2.5-VL-7B-Instruct',
+        'model_path': '/inspire/hdd/project/exploration-topic/public/hwzhang/models/Qwen2.5-VL-7B-Instruct',
     },
     'qwen2.5_vl_72b': {
         'load_func': qwenvl_hermes_load_model,

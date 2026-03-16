@@ -4,20 +4,6 @@ import pandas as pd
 
 
 # ---------------------------------------------------------------------------
-# Shared utilities
-# ---------------------------------------------------------------------------
-
-def load_results(args):
-    """Load results CSV from either --results_path or --save_dir/results.csv."""
-    if args.results_path is not None:
-        df = pd.read_csv(args.results_path)
-        args.save_dir = os.path.dirname(args.results_path)
-    else:
-        df = pd.read_csv(os.path.join(args.save_dir, 'results.csv'))
-    return df
-
-
-# ---------------------------------------------------------------------------
 # Average metric
 # ---------------------------------------------------------------------------
 
@@ -288,7 +274,8 @@ def eval_videomme_by_duration(df, results_path):
     overall_accuracy = (total_correct / total_questions * 100
                         if total_questions > 0 else 0)
 
-    output_file = results_path.replace('.csv', '.txt')
+    save_dir = os.path.dirname(results_path)
+    output_file = os.path.join(save_dir, 'eval_results.txt')
 
     with open(output_file, 'w', encoding='utf-8') as f:
         def write_line(text):
@@ -333,15 +320,13 @@ def build_parser():
     p_gen = sub.add_parser('general',
                            help='Compute average metrics, OVOBench breakdown, '
                                 'and error analysis')
-    p_gen.add_argument('--save_dir', type=str)
-    p_gen.add_argument('--results_path', type=str, default=None)
+    p_gen.add_argument('--results_path', type=str, required=True)
     p_gen.add_argument('--debug', action='store_true')
 
     # --- egoschema: generate submission CSV ---
     p_ego = sub.add_parser('egoschema',
                            help='Generate EgoSchema submission file')
-    p_ego.add_argument('--save_dir', type=str)
-    p_ego.add_argument('--results_path', type=str, default=None)
+    p_ego.add_argument('--results_path', type=str, required=True)
 
     # --- videomme: accuracy by video duration ---
     p_vmme = sub.add_parser('videomme',
@@ -361,9 +346,10 @@ def main():
         return
 
     if args.command == 'general':
-        df = load_results(args)
+        df = pd.read_csv(args.results_path)
+        save_dir = os.path.dirname(args.results_path)
         results = df.to_dict(orient='records')
-        average_acc = calc_average_metric(results, args.save_dir, 'qa_acc')
+        average_acc = calc_average_metric(results, save_dir, 'qa_acc')
 
         benchmark, task_accuracies, category_results = None, None, None
         if 'task' in df.columns:
@@ -374,12 +360,13 @@ def main():
             df, debug=args.debug)
 
         write_evaluation_report(
-            args.save_dir, df, len(results), average_acc,
+            save_dir, df, len(results), average_acc,
             benchmark, task_accuracies, category_results, error_rate)
 
     elif args.command == 'egoschema':
-        df = load_results(args)
-        generate_egoschema_submission(df, args.save_dir)
+        df = pd.read_csv(args.results_path)
+        save_dir = os.path.dirname(args.results_path)
+        generate_egoschema_submission(df, save_dir)
 
     elif args.command == 'videomme':
         df = pd.read_csv(args.results_path)
