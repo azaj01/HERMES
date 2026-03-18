@@ -18,8 +18,6 @@ from inference.reindex_3d import (
 )
 
 
-FPS = 1
-
 import transformers.modeling_flash_attention_utils
 
 if not hasattr(transformers.modeling_flash_attention_utils, "_original_prepare_fa_kwargs"):
@@ -41,7 +39,7 @@ if not hasattr(transformers.modeling_flash_attention_utils, "_original_prepare_f
     transformers.modeling_flash_attention_utils.prepare_fa_kwargs_from_position_ids = _patched_prepare_fa_kwargs
 
 
-def get_qwen2_5_vl_position_ids(video_grid_thw, seq_len, offset=0, spatial_merge_size=2, vision_config=None):
+def get_qwen2_5_vl_position_ids(video_grid_thw, seq_len, offset=0, spatial_merge_size=2, vision_config=None, sample_fps=1):
     t, h, w = video_grid_thw
     llm_grid_t = t
     llm_grid_h = h // spatial_merge_size
@@ -60,7 +58,7 @@ def get_qwen2_5_vl_position_ids(video_grid_thw, seq_len, offset=0, spatial_merge
 
     if vision_config is not None:
         tokens_per_second = vision_config.tokens_per_second
-        second_per_grid_t = 2 / FPS
+        second_per_grid_t = 2 / sample_fps
         range_tensor = torch.arange(llm_grid_t, dtype=torch.float32).view(-1, 1)
         expanded_range = range_tensor.expand(-1, llm_grid_h * llm_grid_w)
         time_tensor = expanded_range * second_per_grid_t * tokens_per_second
@@ -80,9 +78,10 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
     Uses 3D M-RoPE (Multimodal RoPE) and inter-layer consistency optimization.
     """
 
-    def __init__(self, config, processor, init_prompt_ids, kv_size, streaming=True):
+    def __init__(self, config, processor, init_prompt_ids, kv_size, streaming=True, sample_fps=1):
         Abstract_Hermes.__init__(self, processor, init_prompt_ids, kv_size)
         self.streaming = streaming
+        self.sample_fps = sample_fps
 
         num_layers = config.num_hidden_layers if hasattr(config, 'num_hidden_layers') else 28
         self.num_layers = num_layers
@@ -99,7 +98,7 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
 
         self.total_processed_frames = 0
 
-        self._mrope_section = _get_mrope_section(self.model)
+        self._mrope_section = _get_mrope_section(self.language_model)
 
         self._register_forward_hooks()
 
@@ -202,7 +201,7 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
                 pos = torch.arange(layer_len, device=device, dtype=torch.float32)
                 self._position_ids_cache[layer_idx] = pos.unsqueeze(0).expand(3, -1).clone()
 
-        max_pos_limit = getattr(self.model.config, "max_position_embeddings", 128000)
+        max_pos_limit = getattr(self.language_model.config, "max_position_embeddings", 128000)
         compact_threshold = max_pos_limit - 1024
 
         current_max_pos = 0
@@ -258,10 +257,10 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
                             new_pos_kept[dim, video_indices_in_kept] = compact_map[inverse_indices].to(new_pos_kept.dtype)
 
                 cos_old, sin_old = compute_cos_sin_for_positions(
-                    self.model, len(safe_idx), old_pos_kept, dtype, device
+                    self.language_model, len(safe_idx), old_pos_kept, dtype, device
                 )
                 cos_new, sin_new = compute_cos_sin_for_positions(
-                    self.model, len(safe_idx), new_pos_kept, dtype, device
+                    self.language_model, len(safe_idx), new_pos_kept, dtype, device
                 )
                 cos_delta, sin_delta = rotary_delta(cos_old, sin_old, cos_new, sin_new)
 
@@ -364,7 +363,7 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
         pos_1d = torch.arange(seq_len, device=self.device, dtype=torch.float32)
         position_ids_3d = pos_1d.unsqueeze(0).unsqueeze(0).expand(3, 1, -1).clone()
 
-        output = self.model(
+        output = self.language_model(
             input_ids=self.init_prompt_ids,
             use_cache=True,
             return_dict=True,
@@ -405,7 +404,8 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
             video_grid_thw[0].tolist(),
             q_len,
             offset=base_offset,
-            vision_config=self.config.vision_config
+            vision_config=self.config.vision_config,
+            sample_fps=self.sample_fps,
         ).to(self.device)
 
         self._layer_position_ids.clear()
@@ -419,7 +419,7 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
 
         default_position_ids_3d = self._build_position_ids_3d_for_vision(grid_pos_ids, batch)
 
-        out = self.model(
+        out = self.language_model(
             inputs_embeds=video_features,
             past_key_values=self.kv_cache,
             use_cache=True,
@@ -468,7 +468,7 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
 
         inputs_embeds = self.get_input_embeddings()(input_ids)
 
-        config = self.model.config
+        config = self.language_model.config
         num_layers = config.num_hidden_layers
         num_heads = config.num_attention_heads
         num_key_value_heads = config.num_key_value_heads
@@ -656,13 +656,13 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
 
         position_ids_local_3d = self._build_position_ids_3d_for_text(global_offset_per_layer[0], q_len_local, batch)
 
-        use_flash_attn = (hasattr(self.model.config, '_attn_implementation') and
-                        self.model.config._attn_implementation in ["flash_attention_2", "sdpa"])
+        use_flash_attn = (hasattr(self.language_model.config, '_attn_implementation') and
+                        self.language_model.config._attn_implementation in ["flash_attention_2", "sdpa"])
 
         if use_flash_attn:
             attn_weights_local = self._compute_attention_scores_manually(local_input_ids, self.kv_cache)
         else:
-            out_local = self.model(
+            out_local = self.language_model(
                 input_ids=local_input_ids,
                 use_cache=False,
                 past_key_values=self.kv_cache,
@@ -686,7 +686,7 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
         if use_flash_attn:
             attn_weights_global = self._compute_attention_scores_manually(global_input_ids, self.kv_cache)
         else:
-            out_global = self.model(
+            out_global = self.language_model(
                 input_ids=global_input_ids,
                 use_cache=False,
                 past_key_values=self.kv_cache,
@@ -711,7 +711,7 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
         if use_flash_attn:
             attn_weights_mixed = self._compute_attention_scores_manually(mixed_input_ids, self.kv_cache)
         else:
-            out_mixed = self.model(
+            out_mixed = self.language_model(
                 input_ids=mixed_input_ids,
                 use_cache=False,
                 past_key_values=self.kv_cache,
@@ -766,7 +766,7 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
 
         position_ids_3d = self._build_position_ids_3d_for_text(global_offset_prefill[0], q_len_prefill, batch)
 
-        out = self.model(
+        out = self.language_model(
             inputs_embeds=inputs_embeds,
             use_cache=True,
             past_key_values=self.kv_cache,
@@ -826,7 +826,7 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
 
             position_ids_3d = self._build_position_ids_3d_for_text(curr_global_offset[0], 1, 1)
 
-            out = self.model(
+            out = self.language_model(
                 input_ids=torch.as_tensor([[token]], device=device),
                 use_cache=True,
                 past_key_values=past_key_values,
@@ -894,12 +894,12 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
 
 
 def load_model(model_path='Qwen/Qwen2.5-VL-7B-Instruct',
-               n_init=None, kv_size=None, streaming=True, device="cuda"):
+               n_init=None, kv_size=None, streaming=True, device="cuda", sample_fps=1):
     device = 'cuda'
 
-    #max_pixels = 768 * 28 * 28
-    #processor = Qwen2_5_VLProcessor.from_pretrained(model_path, max_pixels=max_pixels)
-    processor = Qwen2_5_VLProcessor.from_pretrained(model_path)
+    max_pixels = 768 * 28 * 28
+    processor = Qwen2_5_VLProcessor.from_pretrained(model_path, max_pixels=max_pixels)
+    #processor = Qwen2_5_VLProcessor.from_pretrained(model_path)
 
     system_prompt = '<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n'
     init_prompt_ids = processor.tokenizer(system_prompt, return_tensors="pt").input_ids.to(device)
@@ -920,6 +920,7 @@ def load_model(model_path='Qwen/Qwen2.5-VL-7B-Instruct',
         kv_size,
     )
     model.streaming = streaming
+    model.sample_fps = sample_fps
 
     num_layers = base_model.model.config.num_hidden_layers
     model.num_layers = num_layers

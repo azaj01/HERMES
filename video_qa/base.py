@@ -91,36 +91,6 @@ class BaseVQA:
     def get_chunk(self, lst, n, k):
         chunks = self.split_list(lst, n)
         return chunks[k]
-
-    def get_smart_resized_video_reader(self, video_path: str, max_pixels: int = None):
-        video_reader = VideoReader(video_path, num_threads=1)
-        nframes = min(len(video_reader), FPS_MAX_FRAMES)
-        height, width, _ = video_reader.next().shape
-
-        if max_pixels is None:
-            max_pixels = max(min(VIDEO_MAX_PIXELS, VIDEO_TOTAL_PIXELS / nframes * FRAME_FACTOR), int(VIDEO_MIN_PIXELS * 1.05))
-        resized_height, resized_width = smart_resize(
-            height,
-            width,
-            factor=IMAGE_FACTOR,
-            min_pixels=VIDEO_MIN_PIXELS,
-            max_pixels=max_pixels,
-        )
-        return video_reader, resized_height, resized_width
-    
-    def get_smart_resized_clip(
-        self, video_chunk: torch.Tensor, 
-        resized_height: int,
-        resized_width: int,
-    ):
-        clip = video_chunk.permute(0, 3, 1 ,2)
-        clip = transforms.functional.resize(
-            clip,
-            [resized_height, resized_width],
-            interpolation=transforms.InterpolationMode.BICUBIC,
-            antialias=True,
-        )
-        return clip
     
     def load_video(self, video_path, clip=None):
         """
@@ -141,7 +111,7 @@ class BaseVQA:
             video = video[frame_idx]
             return video
         else:
-            vr, resized_height, resized_width = self.get_smart_resized_video_reader(video_path)
+            vr = VideoReader(video_path, num_threads=1)
             fps = round(vr.get_avg_fps())
             total_frames = len(vr)
             
@@ -159,7 +129,7 @@ class BaseVQA:
             sample_step = int(fps / self.sample_fps)
             frame_idx = [i for i in range(start_frame, end_frame, sample_step)]
             video = vr.get_batch(frame_idx).asnumpy()
-            return video, resized_height, resized_width
+            return video
     
     def load_video_frames(self, video_path, video_fps, clip=None):
         """
@@ -316,6 +286,7 @@ def work(QA_CLASS):
         model_path=model_path,
         kv_size=args.kv_size,
         streaming=args.streaming,
+        sample_fps=args.sample_fps,
     )
 
     # Load ground truth file
