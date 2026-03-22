@@ -47,7 +47,6 @@ def _get_mrope_section(llm) -> Tuple[int, int, int]:
             return tuple(sec)
     return (16, 24, 24)
 
-@torch.inference_mode()
 def compute_cos_sin_for_positions(llm, seq_len: int, position_ids_3d: torch.Tensor, dtype: torch.dtype, device: torch.device):
     """
     为给定的 3D 位置计算 cos 和 sin（用于 M-RoPE）
@@ -86,7 +85,6 @@ def rotary_delta(cos_old, sin_old, cos_new, sin_new):
     sin_delta = sin_new * cos_old - cos_new * sin_old
     return cos_delta, sin_delta
 
-@torch.inference_mode()
 def apply_rotary_delta_to_keys_only(key_states: torch.Tensor, cos_delta, sin_delta, mrope_section):
     """
     对 key states 应用旋转增量（3D M-RoPE 版本）

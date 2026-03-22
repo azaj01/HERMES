@@ -16,15 +16,12 @@ from transformers import (
     LlavaOnevisionForConditionalGeneration, LlavaOnevisionProcessor,
     Qwen2_5_VLForConditionalGeneration, Qwen2_5_VLProcessor,
 )
-from torchvision import transforms
+
 import logzero
 from logzero import logger
 
 from inference.llavaov_hermes import load_model as llavaov_hermes_load_model
 from inference.qwenvl_hermes import load_model as qwenvl_hermes_load_model
-from qwen_vl_utils.vision_process import (
-    VIDEO_TOTAL_PIXELS, FPS_MAX_FRAMES, VIDEO_MIN_PIXELS, VIDEO_MAX_PIXELS, FRAME_FACTOR, IMAGE_FACTOR, smart_resize
-)
 
 MODELS = {
     'llava_ov_0.5b': {

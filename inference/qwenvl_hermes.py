@@ -895,11 +895,7 @@ class QwenVL_Hermes(Qwen2_5_VLForConditionalGeneration, Abstract_Hermes):
 
 def load_model(model_path='Qwen/Qwen2.5-VL-7B-Instruct',
                n_init=None, kv_size=None, streaming=True, device="cuda", sample_fps=1):
-    device = 'cuda'
-
-    max_pixels = 768 * 28 * 28
-    processor = Qwen2_5_VLProcessor.from_pretrained(model_path, max_pixels=max_pixels)
-    #processor = Qwen2_5_VLProcessor.from_pretrained(model_path)
+    processor = Qwen2_5_VLProcessor.from_pretrained(model_path)
 
     system_prompt = '<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n'
     init_prompt_ids = processor.tokenizer(system_prompt, return_tensors="pt").input_ids.to(device)
