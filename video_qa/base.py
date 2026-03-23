@@ -35,27 +35,27 @@ def qwenvl_hermes_load_model(*args, **kwargs):
 MODELS = {
     'llava_ov_0.5b': {
         'load_func': llavaov_hermes_load_model,
-        'model_path': 'CUSTOM_PATH/llava-onevision-qwen2-0.5b-ov-hf',
+        'model_path': 'models/llava-onevision-qwen2-0.5b-ov-hf',
     },
     'llava_ov_7b': {
         'load_func': llavaov_hermes_load_model,
-        'model_path': 'CUSTOM_PATH/llava-onevision-qwen2-7b-ov-hf',
+        'model_path': 'models/llava-onevision-qwen2-7b-ov-hf',
     },
     'llava_ov_72b': {
         'load_func': llavaov_hermes_load_model,
-        'model_path': 'CUSTOM_PATH/llava-onevision-qwen2-72b-ov-hf',
+        'model_path': 'models/llava-onevision-qwen2-72b-ov-hf',
     },
     'qwen2.5_vl_3b': {
         'load_func': qwenvl_hermes_load_model,
-        'model_path': 'CUSTOM_PATH/Qwen2.5-VL-3B-Instruct',
+        'model_path': 'models/Qwen2.5-VL-3B-Instruct',
     },
     'qwen2.5_vl_7b': {
         'load_func': qwenvl_hermes_load_model,
-        'model_path': 'CUSTOM_PATH/Qwen2.5-VL-7B-Instruct',
+        'model_path': 'models/Qwen2.5-VL-7B-Instruct',
     },
-    'qwen2.5_vl_72b': {
+    'qwen2.5_vl_32b': {
         'load_func': qwenvl_hermes_load_model,
-        'model_path': 'CUSTOM_PATH/Qwen2.5-VL-72B-Instruct',
+        'model_path': 'models/Qwen2.5-VL-32B-Instruct',
     },
 }
 
