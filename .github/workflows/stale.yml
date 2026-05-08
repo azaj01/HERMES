@@ -19,3 +19,4 @@ jobs:
           days-before-issue-close: 5
           days-before-pr-close: 5
           exempt-issue-labels: 'roadmap'
+          close-issue-reason: 'completed'
